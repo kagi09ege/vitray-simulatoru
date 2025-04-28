@@ -2,125 +2,74 @@
 <html>
 <head>
     <title>Vitray Işık Simülasyonu</title>
-    <!-- Pyodide (Tarayıcıda Python Çalıştırma) -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <style>
-        body { font-family: Arial; text-align: center; margin-top: 50px; }
-        button { padding: 10px 20px; font-size: 16px; }
+        body { font-family: Arial; text-align: center; margin-top: 20px; }
+        button { 
+            padding: 12px 24px;
+            font-size: 18px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #output { margin: 20px; min-height: 300px; border: 1px dashed #ccc; padding: 10px; }
+        #plot { max-width: 100%; }
     </style>
 </head>
 <body>
-    <h1>Vitray Işık Simülasyonu</h1>
-    <button onclick="runSimulation()">Simülasyonu Başlat</button>
-    <div id="output"></div>
+    <h1>🎨 Vitray Işık Simülasyonu</h1>
+    <button onclick="runSimulation()">SIMÜLASYONU BAŞLAT</button>
+    <div id="output">
+        <p>Sonuçlar burada görünecek...</p>
+        <img id="plot" style="display:none;">
+    </div>
 
     <script>
         async function runSimulation() {
-            let pyodide = await loadPyodide();
-            document.getElementById("output").innerHTML = "Hesaplanıyor...";
+            const output = document.getElementById("output");
+            output.innerHTML = "⏳ Pyodide yükleniyor... (İlk seferde 15-30 saniye sürebilir)";
             
-            await pyodide.loadPackage("matplotlib");
-            pyodide.runPython(`
+            // Pyodide'i yükle
+            let pyodide = await loadPyodide();
+            await pyodide.loadPackage(["matplotlib", "numpy"]);
+            
+            output.innerHTML = "🔍 Simülasyon çalıştırılıyor...";
+            
+            // Python kodu
+            try {
+                await pyodide.runPython(`
                 import matplotlib.pyplot as plt
                 import numpy as np
-                # Vitray simülasyon kodunuzu buraya yapıştırın
-                import numpy as np
-import tkinter as tk
-from tkinter import colorchooser, Scale
-from PIL import Image, ImageTk
-
-class VitraySimulator:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Vitray Işık Simülasyonu")
-        
-        # Varsayılan ayarlar
-        self.grid_size = 10
-        self.cell_size = 40
-        self.colors = [(255, 0, 0), (0, 0, 255), (0, 255, 0), (255, 255, 0)]
-        self.current_color = (255, 0, 0)  # Kırmızı
-        self.light_intensity = 0.7
-        
-        # Canvas oluştur
-        self.canvas = tk.Canvas(root, width=self.grid_size*self.cell_size, 
-                               height=self.grid_size*self.cell_size, bg="white")
-        self.canvas.pack(side=tk.LEFT, padx=10, pady=10)
-        
-        # Kontrol paneli
-        self.controls = tk.Frame(root)
-        self.controls.pack(side=tk.RIGHT, padx=10)
-        
-        # Renk seçici
-        tk.Button(self.controls, text="Renk Seç", command=self.choose_color).pack(pady=5)
-        
-        # Işık şiddeti kaydırıcı
-        tk.Label(self.controls, text="Işık Şiddeti:").pack()
-        self.light_slider = Scale(self.controls, from_=0.1, to=1.0, resolution=0.1, 
-                                orient=tk.HORIZONTAL, command=self.update_light)
-        self.light_slider.set(self.light_intensity)
-        self.light_slider.pack()
-        
-        # Temizle butonu
-        tk.Button(self.controls, text="Temizle", command=self.clear_canvas).pack(pady=5)
-        
-        # Çizim için bağlantılar
-        self.canvas.bind("<B1-Motion>", self.paint)
-        self.canvas.bind("<Button-1>", self.paint)
-        
-        # Başlangıç grid'i
-        self.grid = np.zeros((self.grid_size, self.grid_size, 3), dtype=np.uint8)
-        self.update_canvas()
-    
-    def choose_color(self):
-        color = colorchooser.askcolor()[0]
-        if color:
-            self.current_color = tuple(map(int, color))
-    
-    def paint(self, event):
-        x, y = event.x // self.cell_size, event.y // self.cell_size
-        if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
-            self.grid[y, x] = self.current_color
-            self.update_canvas()
-    
-    def update_light(self, val):
-        self.light_intensity = float(val)
-        self.update_canvas()
-    
-    def clear_canvas(self):
-        self.grid.fill(0)
-        self.update_canvas()
-    
-    def update_canvas(self):
-        # Işık efektini uygula
-        lit_grid = np.clip(self.grid * self.light_intensity, 0, 255).astype(np.uint8)
-        
-        # Görseli oluştur
-        img = Image.fromarray(lit_grid, 'RGB')
-        img = img.resize((self.grid_size*self.cell_size, self.grid_size*self.cell_size), Image.NEAREST)
-        self.tk_img = ImageTk.PhotoImage(img)
-        
-        # Canvas'ı güncelle
-        self.canvas.delete("all")
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_img)
-        
-        # Grid çizgileri
-        for i in range(self.grid_size + 1):
-            self.canvas.create_line(i * self.cell_size, 0, i * self.cell_size, 
-                                  self.grid_size * self.cell_size, fill="gray")
-            self.canvas.create_line(0, i * self.cell_size, self.grid_size * self.cell_size, 
-                                  i * self.cell_size, fill="gray")
-
-# Uygulamayı başlat
-root = tk.Tk()
-app = VitraySimulator(root)
-root.mainloop()
+                import io, base64
+                
+                # Vitray ışık dağılım simülasyonu
                 x = np.linspace(0, 10, 100)
-                y = np.sin(x)
-                plt.plot(x, y)
-                plt.title("Vitray Işık Dağılımı")
-                plt.show()
-            `);
-            document.getElementById("output").innerHTML = "Simülasyon tamamlandı!";
+                y = np.sin(x) * np.cos(x**2)  # Örnek desen
+                
+                plt.figure(figsize=(8, 4))
+                plt.plot(x, y, color='purple', linewidth=3)
+                plt.title("Vitray Işık Deseni", fontsize=14)
+                plt.xlabel("Pencere Alanı")
+                plt.ylabel("Işık Şiddeti")
+                plt.grid(True)
+                
+                # Grafiği HTML'e aktarma
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png')
+                buf.seek(0)
+                image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                plt.close()
+                js_image = f"data:image/png;base64,{image_base64}"
+                js.document.getElementById("plot").src = js_image
+                `);
+                
+                document.getElementById("plot").style.display = "block";
+                output.innerHTML = "✅ Simülasyon başarılı! Sonuçlar:";
+            } catch (error) {
+                output.innerHTML = `❌ Hata: ${error}`;
+            }
         }
     </script>
 </body>
