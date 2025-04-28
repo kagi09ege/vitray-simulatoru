@@ -6,214 +6,161 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background: #f0f0f0;
+            background: #222;
+            color: white;
             margin: 0;
             padding: 20px;
         }
         #container {
-            max-width: 800px;
+            max-width: 600px;
             margin: 0 auto;
-            background: white;
-            border-radius: 15px;
+            background: #333;
+            border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
         #bit-vitray {
             width: 100%;
-            height: 500px;
+            height: 400px;
             background: black;
             margin: 20px 0;
             position: relative;
             overflow: hidden;
-            border-radius: 10px;
+            border-radius: 8px;
         }
         .pixel {
             position: absolute;
-            width: 25px;
-            height: 25px;
-            border-radius: 4px;
-            transition: all 0.3s;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.7);
         }
-        .light-source {
+        .light {
             position: absolute;
-            width: 150px;
-            height: 50px;
-            background: linear-gradient(to top, yellow, white);
+            width: 100px;
+            height: 30px;
+            background: yellow;
             bottom: 0;
-            opacity: 0.8;
-            z-index: 10;
-            border-radius: 10px 10px 0 0;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0.7;
+            border-radius: 5px 5px 0 0;
             cursor: move;
         }
         .controls {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f8f8;
-            border-radius: 10px;
+            margin: 15px 0;
         }
         button {
             background: #6a3093;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 15px;
             border-radius: 5px;
             margin: 5px;
             cursor: pointer;
-            font-size: 16px;
-            transition: all 0.2s;
         }
-        button:hover {
-            background: #4b2e83;
-            transform: translateY(-2px);
-        }
-        #color-display {
-            margin-top: 20px;
-            padding: 15px;
-            background: #333;
-            color: white;
-            border-radius: 10px;
-        }
-        #footer {
-            margin-top: 20px;
-            color: #777;
-            font-size: 14px;
+        #color-output {
+            height: 50px;
+            margin: 15px auto;
+            border-radius: 5px;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
     <div id="container">
         <h1>Bit Vitray Işık Simülatörü</h1>
-        <p>Işık kaynağını sürükleyin, vitray ışığı renklerine ayıracak!</p>
+        <p>Işık kaynağını sürükleyin, vitray ışığı renklerine ayırsın!</p>
         
         <div id="bit-vitray">
-            <!-- Işık kaynağı -->
-            <div class="light-source" id="light"></div>
-            <!-- Vitray pikselleri buraya eklenecek -->
+            <div class="light" id="light-source"></div>
+            <!-- Pikseller buraya eklenecek -->
         </div>
         
         <div class="controls">
-            <button id="generate-vitray">Vitray Oluştur</button>
-            <button id="reset-btn">Sıfırla</button>
-            <div style="margin-top: 15px;">
-                <label for="light-intensity" style="font-weight: bold;">Işık Şiddeti: </label>
-                <input type="range" id="light-intensity" min="10" max="100" value="70">
-                <span id="intensity-value">70%</span>
+            <button id="generate-btn">Yeni Vitray Oluştur</button>
+            <div>
+                <label>Işık Gücü: <span id="power-value">50</span>%</label>
+                <input type="range" id="light-power" min="10" max="100" value="50">
             </div>
         </div>
         
-        <div id="color-display">
-            <h3>Filtrelenmiş Işık Çıktısı</h3>
-            <div id="color-result" style="width:100%; height:50px; margin:10px 0; border-radius:5px;"></div>
-            <p id="rgb-value">RGB(0, 0, 0)</p>
+        <div id="color-output">
+            Filtrelenmiş Işık Rengi: <span id="rgb-code">RGB(0,0,0)</span>
         </div>
-        
-        <div id="footer">Kayra Ege Farfar</div>
     </div>
 
     <script>
-        // Vitray ve ışık kontrolü
+        // Temel ayarlar
         const vitray = document.getElementById('bit-vitray');
-        const light = document.getElementById('light');
-        const colorResult = document.getElementById('color-result');
-        const rgbValue = document.getElementById('rgb-value');
+        const light = document.getElementById('light-source');
+        const rgbCode = document.getElementById('rgb-code');
+        const powerValue = document.getElementById('power-value');
         
-        // Vitray piksellerini oluştur
+        // Vitray oluşturma
         function createVitray() {
             vitray.innerHTML = '';
             vitray.appendChild(light);
             
-            const cols = 20; // Yatayda 20 piksel
-            const rows = 15; // Dikeyde 15 piksel
-            const pixelSize = vitray.offsetWidth / cols;
+            const width = Math.floor(vitray.offsetWidth / 20);
+            const height = Math.floor(vitray.offsetHeight / 20) - 2;
             
             const colors = [
-                '#FF0000', '#00FF00', '#0000FF', // Kırmızı, Yeşil, Mavi
-                '#FFFF00', '#FF00FF', '#00FFFF', // Sarı, Macenta, Cyan
-                '#FFA500', '#800080', '#008000'  // Turuncu, Mor, Koyu Yeşil
+                'rgba(255,0,0,0.7)', 'rgba(0,255,0,0.7)', 'rgba(0,0,255,0.7)',
+                'rgba(255,255,0,0.7)', 'rgba(255,0,255,0.7)', 'rgba(0,255,255,0.7)'
             ];
             
-            for(let y = 0; y < rows; y++) {
-                for(let x = 0; x < cols; x++) {
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
                     const pixel = document.createElement('div');
                     pixel.className = 'pixel';
-                    pixel.style.width = `${pixelSize}px`;
-                    pixel.style.height = `${pixelSize}px`;
-                    pixel.style.left = `${x * pixelSize}px`;
-                    pixel.style.top = `${y * pixelSize}px`;
-                    
-                    // Rastgele renk ve opaklık atama
-                    const color = colors[Math.floor(Math.random() * colors.length)];
-                    const opacity = (0.3 + Math.random() * 0.7).toFixed(2);
-                    pixel.style.backgroundColor = color;
-                    pixel.style.opacity = opacity;
-                    
-                    // Filtre değerini sakla
-                    pixel.dataset.color = color;
-                    pixel.dataset.opacity = opacity;
-                    
+                    pixel.style.left = `${x * 20}px`;
+                    pixel.style.top = `${y * 20}px`;
+                    pixel.style.background = colors[Math.floor(Math.random() * colors.length)];
                     vitray.appendChild(pixel);
                 }
             }
             
-            // Işık kaynağını ortala
-            light.style.left = `${(vitray.offsetWidth - light.offsetWidth) / 2}px`;
             updateLightEffect();
         }
         
         // Işık etkisini güncelle
         function updateLightEffect() {
-            const pixels = document.querySelectorAll('.pixel');
             const lightRect = light.getBoundingClientRect();
-            const intensity = document.getElementById('light-intensity').value / 100;
+            const power = document.getElementById('light-power').value / 100;
+            powerValue.textContent = document.getElementById('light-power').value;
             
             let totalR = 0, totalG = 0, totalB = 0;
-            let affectedPixels = 0;
+            let count = 0;
             
-            pixels.forEach(pixel => {
+            document.querySelectorAll('.pixel').forEach(pixel => {
                 const pixelRect = pixel.getBoundingClientRect();
-                const distanceX = Math.abs((lightRect.left + lightRect.width/2) - (pixelRect.left + pixelRect.width/2));
-                const distanceY = (pixelRect.top + pixelRect.height/2) - (lightRect.top + lightRect.height/2);
+                const dx = Math.abs((lightRect.left + lightRect.width/2) - (pixelRect.left + pixelRect.width/2));
+                const dy = (pixelRect.top + pixelRect.height/2) - (lightRect.top + lightRect.height/2);
                 
-                // Işığın piksel üzerindeki etkisi
-                if(distanceY > 0) { // Sadece ışık kaynağının üstündeki pikseller
-                    const effect = intensity * (1 - distanceX/(lightRect.width*1.5)) * pixel.dataset.opacity;
+                if (dy > 0) {
+                    const effect = power * (1 - dx/200) * parseFloat(pixel.style.background.split(',')[3]);
                     
-                    if(effect > 0.1) {
-                        // Renk çözümleme
-                        const color = pixel.dataset.color;
-                        const r = parseInt(color.substr(1,2), 16);
-                        const g = parseInt(color.substr(3,2), 16);
-                        const b = parseInt(color.substr(5,2), 16);
-                        
-                        // Işık etkisiyle renk karışımı
-                        const litR = Math.min(255, Math.floor(r * effect));
-                        const litG = Math.min(255, Math.floor(g * effect));
-                        const litB = Math.min(255, Math.floor(b * effect));
-                        
-                        pixel.style.boxShadow = `0 0 15px rgba(${litR},${litG},${litB},${effect})`;
-                        
-                        // Ortalama renk için topla
-                        totalR += litR;
-                        totalG += litG;
-                        totalB += litB;
-                        affectedPixels++;
-                    } else {
-                        pixel.style.boxShadow = 'none';
+                    if (effect > 0.1) {
+                        const color = pixel.style.background.match(/\d+/g);
+                        totalR += color[0] * effect;
+                        totalG += color[1] * effect;
+                        totalB += color[2] * effect;
+                        count++;
                     }
-                } else {
-                    pixel.style.boxShadow = 'none';
                 }
             });
             
-            // Ortalama rengi göster
-            if(affectedPixels > 0) {
-                const avgR = Math.round(totalR / affectedPixels);
-                const avgG = Math.round(totalG / affectedPixels);
-                const avgB = Math.round(totalB / affectedPixels);
-                
-                colorResult.style.background = `rgb(${avgR},${avgG},${avgB})`;
-                rgbValue.textContent = `RGB(${avgR}, ${avgG}, ${avgB})`;
+            if (count > 0) {
+                const r = Math.round(totalR / count);
+                const g = Math.round(totalG / count);
+                const b = Math.round(totalB / count);
+                rgbCode.textContent = `RGB(${r},${g},${b})`;
+                document.getElementById('color-output').style.background = `rgb(${r},${g},${b})`;
             }
         }
         
@@ -240,19 +187,11 @@
         });
         
         // Kontroller
-        document.getElementById('generate-vitray').addEventListener('click', createVitray);
-        document.getElementById('reset-btn').addEventListener('click', function() {
-            vitray.innerHTML = '';
-            createVitray();
-        });
+        document.getElementById('generate-btn').addEventListener('click', createVitray);
+        document.getElementById('light-power').addEventListener('input', updateLightEffect);
         
-        document.getElementById('light-intensity').addEventListener('input', function(e) {
-            document.getElementById('intensity-value').textContent = `${e.target.value}%`;
-            updateLightEffect();
-        });
-        
-        // Sayfa yüklendiğinde otomatik oluştur
-        window.addEventListener('load', createVitray);
+        // Başlangıçta vitray oluştur
+        createVitray();
     </script>
 </body>
 </html>
