@@ -3,166 +3,159 @@
 <head>
     <title>Vitray Işık Simülatörü</title>
     <style>
-        body { 
-            font-family: 'Segoe UI', sans-serif;
-            text-align: center;
-            background: #f0f2f5;
-            padding: 20px;
-        }
-        #container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            padding: 20px;
-        }
-        #vitray-img {
-            width: 100%;
-            max-height: 500px;
-            object-fit: contain;
-            border-radius: 10px;
+        /* Temel stiller (önceki koddan aynı) */
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #f0f2f5; padding: 20px; }
+        #container { max-width: 900px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); padding: 20px; }
+        
+        /* Çizim araçları stili */
+        #tools {
+            display: flex;
+            gap: 10px;
             margin: 15px 0;
-            filter: brightness(0.8) contrast(1.2);
+            justify-content: center;
         }
-        #light-control {
-            width: 80%;
-            margin: 20px auto;
-        }
-        #vector-canvas {
-            border: 1px solid #ddd;
-            margin-top: 15px;
-            background: rgba(0,0,0,0.05);
-        }
-        button {
+        .tool-btn {
+            padding: 8px 15px;
             background: #6a3093;
             color: white;
             border: none;
-            padding: 12px 25px;
             border-radius: 5px;
-            margin: 10px;
             cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s;
         }
-        button:hover {
+        .tool-btn.active {
             background: #4b2e83;
-            transform: translateY(-2px);
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #6a3093;
         }
-        .slider-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-        }
-        #designer-mode {
-            display: none;
-            margin-top: 20px;
+        #color-picker {
+            vertical-align: middle;
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
     <div id="container">
-        <h1>🎨 Vitray Işık Simülatörü</h1>
-        
-        <!-- Vitray Görseli -->
-        <img id="vitray-img" src="https://media-cdn.tripadvisor.com/media/photo-s/02/90/55/73/blue-mosque-stained-glass.jpg" alt="Vitray">
-        
-        <!-- Işık Kontrolleri -->
-        <div class="slider-container">
-            <span>Işık Şiddeti: </span>
-            <input type="range" id="light-control" min="0" max="100" value="50">
-            <span id="light-value">50%</span>
-        </div>
-        
-        <!-- Işın Vektörleri -->
-        <canvas id="vector-canvas" width="800" height="200"></canvas>
-        
-        <!-- Butonlar -->
-        <button id="show-vectors">Işınları Göster</button>
-        <button id="design-mode-btn">Kendin Tasarla</button>
+        <!-- Önceki içerik... -->
         
         <!-- Tasarım Modu -->
         <div id="designer-mode">
             <h3>Vitray Tasarım Paneli</h3>
-            <canvas id="design-canvas" width="800" height="500" style="border:1px solid #ccc;"></canvas>
+            
+            <!-- Çizim Araçları -->
+            <div id="tools">
+                <button class="tool-btn active" data-tool="pencil">✏️ Kalem</button>
+                <button class="tool-btn" data-tool="line">📏 Düz Çizgi</button>
+                <button class="tool-btn" data-tool="rect">⬛ Dikdörtgen</button>
+                <button class="tool-btn" data-tool="circle">⭕ Daire</button>
+                <button class="tool-btn" data-tool="eraser">🧽 Silgi</button>
+                <input type="color" id="color-picker" value="#6a3093">
+            </div>
+            
+            <canvas id="design-canvas" width="800" height="500" style="border:1px solid #ccc; background: white;"></canvas>
+            
             <div>
-                <button id="add-glass">Cam Ekle</button>
+                <button id="clear-canvas">Temizle</button>
                 <button id="ai-complete">Yapay Zeka ile Tamamla</button>
                 <button id="save-design">Tasarımı Kaydet</button>
             </div>
         </div>
+        
+        <div id="footer">Kayra Ege Farfar</div>
     </div>
 
     <script>
-        // Temel Değişkenler
-        const vitrayImg = document.getElementById('vitray-img');
-        const lightControl = document.getElementById('light-control');
-        const lightValue = document.getElementById('light-value');
-        const vectorCanvas = document.getElementById('vector-canvas');
-        const vectorCtx = vectorCanvas.getContext('2d');
-        
-        // Işık Ayarları
-        lightControl.addEventListener('input', (e) => {
-            const value = e.target.value;
-            lightValue.textContent = `${value}%`;
-            
-            // Vitray parlaklığını güncelle
-            vitrayImg.style.filter = `brightness(${value/100 + 0.5}) contrast(${value/50 + 1})`;
-            
-            // Işınları çiz (eğer aktifse)
-            if(document.getElementById('show-vectors').classList.contains('active')) {
-                drawLightVectors(value);
-            }
+        // Çizim Fonksiyonları
+        const canvas = document.getElementById('design-canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let currentTool = 'pencil';
+        let currentColor = '#6a3093';
+        let startX, startY;
+
+        // Araç seçimi
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTool = btn.dataset.tool;
+            });
         });
 
-        // Işın Vektörleri
-        function drawLightVectors(intensity) {
-            vectorCtx.clearRect(0, 0, vectorCanvas.width, vectorCanvas.height);
+        // Renk seçici
+        document.getElementById('color-picker').addEventListener('input', (e) => {
+            currentColor = e.target.value;
+        });
+
+        // Canvas etkileşimleri
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            startX = e.offsetX;
+            startY = e.offsetY;
             
-            // Işın sayısını şiddete göre ayarla
-            const rayCount = Math.floor(intensity / 10) + 3;
-            
-            for(let i = 0; i < rayCount; i++) {
-                const x = (i + 1) * (vectorCanvas.width / (rayCount + 1));
-                const power = intensity * 0.8 + Math.random() * 20;
-                
-                // Işın çiz
-                vectorCtx.beginPath();
-                vectorCtx.moveTo(x, 0);
-                vectorCtx.lineTo(x + (Math.random() * 40 - 20), vectorCanvas.height);
-                vectorCtx.strokeStyle = `rgba(255, 200, 50, ${power/100})`;
-                vectorCtx.lineWidth = power/30;
-                vectorCtx.stroke();
-                
-                // Işın ucu efekti
-                const gradient = vectorCtx.createRadialGradient(x, 0, 0, x, 0, power/2);
-                gradient.addColorStop(0, `rgba(255, 255, 200, ${power/80})`);
-                gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
-                vectorCtx.fillStyle = gradient;
-                vectorCtx.fillRect(x - power/2, 0, power, power/3);
+            if(currentTool === 'pencil' || currentTool === 'eraser') {
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
             }
         }
 
-        // Buton Etkileşimleri
-        document.getElementById('show-vectors').addEventListener('click', function() {
-            this.classList.toggle('active');
-            if(this.classList.contains('active')) {
-                drawLightVectors(lightControl.value);
-                this.textContent = "Işınları Gizle";
-            } else {
-                vectorCtx.clearRect(0, 0, vectorCanvas.width, vectorCanvas.height);
-                this.textContent = "Işınları Göster";
+        function draw(e) {
+            if(!isDrawing) return;
+            
+            ctx.lineWidth = currentTool === 'eraser' ? 20 : 5;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = currentTool === 'eraser' ? 'white' : currentColor;
+            
+            switch(currentTool) {
+                case 'pencil':
+                case 'eraser':
+                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.stroke();
+                    break;
+                    
+                case 'line':
+                    redrawCanvas();
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.stroke();
+                    break;
+                    
+                case 'rect':
+                    redrawCanvas();
+                    ctx.strokeRect(startX, startY, e.offsetX - startX, e.offsetY - startY);
+                    break;
+                    
+                case 'circle':
+                    redrawCanvas();
+                    const radius = Math.sqrt(Math.pow(e.offsetX - startX, 2) + Math.pow(e.offsetY - startY, 2));
+                    ctx.beginPath();
+                    ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    break;
             }
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function redrawCanvas() {
+            // Geçici çizimler için canvas'ı temizle
+            const temp = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.putImageData(temp, 0, 0);
+        }
+
+        // Temizle butonu
+        document.getElementById('clear-canvas').addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         });
 
-        document.getElementById('design-mode-btn').addEventListener('click', function() {
-            const designerMode = document.getElementById('designer-mode');
-            designerMode.style.display = designerMode.style.display === 'block' ? 'none' : 'block';
-        });
-
-        // Tasarım Modu Fonksiyonları
-        // ... (Bu kısma tasarım araçları eklenecek)
+        // Diğer fonksiyonlar (önceki koddan aynı)...
     </script>
 </body>
 </html>
