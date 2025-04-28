@@ -1,10 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Vitray Simülatörü</title>
+    <title>Vitray Işık Simülasyonu</title>
+    <!-- Pyodide (Tarayıcıda Python Çalıştırma) -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 50px; }
+        button { padding: 10px 20px; font-size: 16px; }
+    </style>
 </head>
 <body>
-    <h1>Proje Yükleniyor...</h1>
-    <!-- Python simülasyonu için Pyodide entegrasyonu ekleyebilirsiniz -->
+    <h1>Vitray Işık Simülasyonu</h1>
+    <button onclick="runSimulation()">Simülasyonu Başlat</button>
+    <div id="output"></div>
+
+    <script>
+        async function runSimulation() {
+            let pyodide = await loadPyodide();
+            document.getElementById("output").innerHTML = "Hesaplanıyor...";
+            
+            await pyodide.loadPackage("matplotlib");
+            pyodide.runPython(`
+                import matplotlib.pyplot as plt
+                import numpy as np
+                # Vitray simülasyon kodunuzu buraya yapıştırın
+                x = np.linspace(0, 10, 100)
+                y = np.sin(x)
+                plt.plot(x, y)
+                plt.title("Vitray Işık Dağılımı")
+                plt.show()
+            `);
+            document.getElementById("output").innerHTML = "Simülasyon tamamlandı!";
+        }
+    </script>
 </body>
 </html>
