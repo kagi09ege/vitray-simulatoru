@@ -1,78 +1,168 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Vitray Işık Simülasyonu</title>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <title>Vitray Işık Simülatörü</title>
     <style>
-        body { font-family: Arial; text-align: center; margin-top: 20px; }
-        button { 
-            padding: 12px 24px;
-            font-size: 18px;
-            background: #4CAF50;
+        body { 
+            font-family: 'Segoe UI', sans-serif;
+            text-align: center;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        #container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        #vitray-img {
+            width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            border-radius: 10px;
+            margin: 15px 0;
+            filter: brightness(0.8) contrast(1.2);
+        }
+        #light-control {
+            width: 80%;
+            margin: 20px auto;
+        }
+        #vector-canvas {
+            border: 1px solid #ddd;
+            margin-top: 15px;
+            background: rgba(0,0,0,0.05);
+        }
+        button {
+            background: #6a3093;
             color: white;
             border: none;
-            border-radius: 4px;
+            padding: 12px 25px;
+            border-radius: 5px;
+            margin: 10px;
             cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
         }
-        #output { margin: 20px; min-height: 300px; border: 1px dashed #ccc; padding: 10px; }
-        #plot { max-width: 100%; }
+        button:hover {
+            background: #4b2e83;
+            transform: translateY(-2px);
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        #designer-mode {
+            display: none;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <h1>🎨 Vitray Işık Simülasyonu</h1>
-    <button onclick="runSimulation()">SIMÜLASYONU BAŞLAT</button>
-    <div id="output">
-        <p>Sonuçlar burada görünecek...</p>
-        <img id="plot" style="display:none;">
+    <div id="container">
+        <h1>🎨 Vitray Işık Simülatörü</h1>
+        
+        <!-- Vitray Görseli -->
+        <img id="vitray-img" src="https://media-cdn.tripadvisor.com/media/photo-s/02/90/55/73/blue-mosque-stained-glass.jpg" alt="Vitray">
+        
+        <!-- Işık Kontrolleri -->
+        <div class="slider-container">
+            <span>Işık Şiddeti: </span>
+            <input type="range" id="light-control" min="0" max="100" value="50">
+            <span id="light-value">50%</span>
+        </div>
+        
+        <!-- Işın Vektörleri -->
+        <canvas id="vector-canvas" width="800" height="200"></canvas>
+        
+        <!-- Butonlar -->
+        <button id="show-vectors">Işınları Göster</button>
+        <button id="design-mode-btn">Kendin Tasarla</button>
+        
+        <!-- Tasarım Modu -->
+        <div id="designer-mode">
+            <h3>Vitray Tasarım Paneli</h3>
+            <canvas id="design-canvas" width="800" height="500" style="border:1px solid #ccc;"></canvas>
+            <div>
+                <button id="add-glass">Cam Ekle</button>
+                <button id="ai-complete">Yapay Zeka ile Tamamla</button>
+                <button id="save-design">Tasarımı Kaydet</button>
+            </div>
+        </div>
     </div>
 
-<script>
-    async function runSimulation() {
-        const output = document.getElementById("output");
-        output.innerHTML = "⏳ Pyodide yükleniyor... (Lütfen bekleyiniz)";
+    <script>
+        // Temel Değişkenler
+        const vitrayImg = document.getElementById('vitray-img');
+        const lightControl = document.getElementById('light-control');
+        const lightValue = document.getElementById('light-value');
+        const vectorCanvas = document.getElementById('vector-canvas');
+        const vectorCtx = vectorCanvas.getContext('2d');
         
-        // Pyodide'i yükle
-        let pyodide = await loadPyodide({
-            stdout: (text) => output.innerHTML += `<br>${text}`,
-            stderr: (text) => output.innerHTML += `<br><span style="color:red">${text}</span>`
+        // Işık Ayarları
+        lightControl.addEventListener('input', (e) => {
+            const value = e.target.value;
+            lightValue.textContent = `${value}%`;
+            
+            // Vitray parlaklığını güncelle
+            vitrayImg.style.filter = `brightness(${value/100 + 0.5}) contrast(${value/50 + 1})`;
+            
+            // Işınları çiz (eğer aktifse)
+            if(document.getElementById('show-vectors').classList.contains('active')) {
+                drawLightVectors(value);
+            }
         });
-        
-        await pyodide.loadPackage(["matplotlib", "numpy"]);
-        
-        // Python kodu
-        try {
-            await pyodide.runPython(`
-                import matplotlib.pyplot as plt
-                import numpy as np
-                from js import document
-                import io, base64
+
+        // Işın Vektörleri
+        function drawLightVectors(intensity) {
+            vectorCtx.clearRect(0, 0, vectorCanvas.width, vectorCanvas.height);
+            
+            // Işın sayısını şiddete göre ayarla
+            const rayCount = Math.floor(intensity / 10) + 3;
+            
+            for(let i = 0; i < rayCount; i++) {
+                const x = (i + 1) * (vectorCanvas.width / (rayCount + 1));
+                const power = intensity * 0.8 + Math.random() * 20;
                 
-                # Vitray simülasyonu
-                x = np.linspace(0, 10, 100)
-                y = np.sin(x) * np.cos(x*0.5) * 10 + 20
+                // Işın çiz
+                vectorCtx.beginPath();
+                vectorCtx.moveTo(x, 0);
+                vectorCtx.lineTo(x + (Math.random() * 40 - 20), vectorCanvas.height);
+                vectorCtx.strokeStyle = `rgba(255, 200, 50, ${power/100})`;
+                vectorCtx.lineWidth = power/30;
+                vectorCtx.stroke();
                 
-                # Grafik oluştur
-                plt.figure(figsize=(8,4))
-                plt.fill_between(x, y, color='purple', alpha=0.7)
-                plt.title("Vitray Işık Dağılımı")
-                plt.grid(True)
-                
-                # HTML'e aktar
-                buf = io.BytesIO()
-                plt.savefig(buf, format='png')
-                buf.seek(0)
-                img_data = f"data:image/png;base64,{base64.b64encode(buf.read()).decode('utf-8')}"
-                plt.close()
-                
-                # JavaScript'e grafik gönder
-                img = document.createElement("img")
-                img.src = img_data
-                document.getElementById("output").appendChild(img)
-            `);
-        } catch (error) {
-            output.innerHTML += `<br><span style="color:red">Hata: ${error}</span>`;
+                // Işın ucu efekti
+                const gradient = vectorCtx.createRadialGradient(x, 0, 0, x, 0, power/2);
+                gradient.addColorStop(0, `rgba(255, 255, 200, ${power/80})`);
+                gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+                vectorCtx.fillStyle = gradient;
+                vectorCtx.fillRect(x - power/2, 0, power, power/3);
+            }
         }
-    }
-</script>
+
+        // Buton Etkileşimleri
+        document.getElementById('show-vectors').addEventListener('click', function() {
+            this.classList.toggle('active');
+            if(this.classList.contains('active')) {
+                drawLightVectors(lightControl.value);
+                this.textContent = "Işınları Gizle";
+            } else {
+                vectorCtx.clearRect(0, 0, vectorCanvas.width, vectorCanvas.height);
+                this.textContent = "Işınları Göster";
+            }
+        });
+
+        document.getElementById('design-mode-btn').addEventListener('click', function() {
+            const designerMode = document.getElementById('designer-mode');
+            designerMode.style.display = designerMode.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Tasarım Modu Fonksiyonları
+        // ... (Bu kısma tasarım araçları eklenecek)
+    </script>
 </body>
 </html>
