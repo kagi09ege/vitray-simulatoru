@@ -26,51 +26,53 @@
         <img id="plot" style="display:none;">
     </div>
 
-    <script>
-        async function runSimulation() {
-            const output = document.getElementById("output");
-            output.innerHTML = "⏳ Pyodide yükleniyor... (İlk seferde 15-30 saniye sürebilir)";
-            
-            // Pyodide'i yükle
-            let pyodide = await loadPyodide();
-            await pyodide.loadPackage(["matplotlib", "numpy"]);
-            
-            output.innerHTML = "🔍 Simülasyon çalıştırılıyor...";
-            
-            // Python kodu
-            try {
-                await pyodide.runPython(`
+<script>
+    async function runSimulation() {
+        const output = document.getElementById("output");
+        output.innerHTML = "⏳ Pyodide yükleniyor... (Lütfen bekleyiniz)";
+        
+        // Pyodide'i yükle
+        let pyodide = await loadPyodide({
+            stdout: (text) => output.innerHTML += `<br>${text}`,
+            stderr: (text) => output.innerHTML += `<br><span style="color:red">${text}</span>`
+        });
+        
+        await pyodide.loadPackage(["matplotlib", "numpy"]);
+        
+        // Python kodu
+        try {
+            await pyodide.runPython(`
                 import matplotlib.pyplot as plt
                 import numpy as np
+                from js import document
                 import io, base64
                 
-                # Vitray ışık dağılım simülasyonu
+                # Vitray simülasyonu
                 x = np.linspace(0, 10, 100)
-                y = np.sin(x) * np.cos(x**2)  # Örnek desen
+                y = np.sin(x) * np.cos(x*0.5) * 10 + 20
                 
-                plt.figure(figsize=(8, 4))
-                plt.plot(x, y, color='purple', linewidth=3)
-                plt.title("Vitray Işık Deseni", fontsize=14)
-                plt.xlabel("Pencere Alanı")
-                plt.ylabel("Işık Şiddeti")
+                # Grafik oluştur
+                plt.figure(figsize=(8,4))
+                plt.fill_between(x, y, color='purple', alpha=0.7)
+                plt.title("Vitray Işık Dağılımı")
                 plt.grid(True)
                 
-                # Grafiği HTML'e aktarma
+                # HTML'e aktar
                 buf = io.BytesIO()
                 plt.savefig(buf, format='png')
                 buf.seek(0)
-                image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                img_data = f"data:image/png;base64,{base64.b64encode(buf.read()).decode('utf-8')}"
                 plt.close()
-                js_image = f"data:image/png;base64,{image_base64}"
-                js.document.getElementById("plot").src = js_image
-                `);
                 
-                document.getElementById("plot").style.display = "block";
-                output.innerHTML = "✅ Simülasyon başarılı! Sonuçlar:";
-            } catch (error) {
-                output.innerHTML = `❌ Hata: ${error}`;
-            }
+                # JavaScript'e grafik gönder
+                img = document.createElement("img")
+                img.src = img_data
+                document.getElementById("output").appendChild(img)
+            `);
+        } catch (error) {
+            output.innerHTML += `<br><span style="color:red">Hata: ${error}</span>`;
         }
-    </script>
+    }
+</script>
 </body>
 </html>
